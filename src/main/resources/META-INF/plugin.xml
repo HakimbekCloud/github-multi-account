@@ -1,0 +1,47 @@
+<idea-plugin>
+    <id>uz.hakimbek.github-account-switcher</id>
+    <name>GitHub Account Switcher</name>
+    <vendor email="hakimbekboboyev@gmail.com">Hakimbek</vendor>
+
+    <description><![CDATA[
+    Bir nechta GitHub akkaunt orasida bir bosishda almashish.<br/>
+    Tanlangan akkaunt joriy repozitoriyning <b>lokal</b> git configiga yoziladi:
+    <ul>
+      <li><code>user.name</code> / <code>user.email</code> — commit muallifi</li>
+      <li>HTTPS remote URL ga GitHub login qo'shiladi (<code>https://login@github.com/...</code>) — push shu akkaunt bilan</li>
+      <li>SSH kalit berilgan bo'lsa <code>core.sshCommand</code> — push shu kalit bilan</li>
+    </ul>
+    Status barda joriy akkaunt ko'rinadi, ustiga bosib almashtiriladi.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationConfigurable parentId="tools"
+                                 instance="uz.hakimbek.ghswitch.AccountsConfigurable"
+                                 id="uz.hakimbek.ghswitch.settings"
+                                 displayName="GitHub Account Switcher"/>
+        <statusBarWidgetFactory id="GitHubAccountSwitcher"
+                                implementation="uz.hakimbek.ghswitch.AccountWidgetFactory"
+                                order="after positionWidget"/>
+        <postStartupActivity implementation="uz.hakimbek.ghswitch.IdentityStartupCheck"/>
+        <notificationGroup id="GitHub Account Switcher" displayType="BALLOON"/>
+    </extensions>
+
+    <applicationListeners>
+        <listener class="uz.hakimbek.ghswitch.FrameActivationListener"
+                  topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+    </applicationListeners>
+
+    <actions>
+        <action id="uz.hakimbek.ghswitch.SwitchAccount"
+                class="uz.hakimbek.ghswitch.SwitchAccountAction"
+                text="Switch GitHub Account…"
+                description="Joriy repozitoriy uchun GitHub akkauntni almashtirish">
+            <add-to-group group-id="Git.MainMenu" anchor="first"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift G"/>
+        </action>
+    </actions>
+</idea-plugin>
