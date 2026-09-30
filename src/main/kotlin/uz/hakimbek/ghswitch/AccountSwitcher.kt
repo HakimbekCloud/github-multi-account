@@ -51,11 +51,11 @@ class AccountSwitcher(private val project: Project) {
     }
 
     fun switchTo(account: GitAccount) {
-        object : Task.Backgroundable(project, "GitHub akkaunt almashtirilmoqda…", false) {
+        object : Task.Backgroundable(project, Msg("switch.progress"), false) {
             override fun run(indicator: ProgressIndicator) {
                 val roots = git.roots()
                 if (roots.isEmpty()) {
-                    notify("Loyihada git repozitoriy topilmadi.", NotificationType.WARNING)
+                    notify(Msg("switch.noRepo"), NotificationType.WARNING)
                     return
                 }
                 roots.forEach { apply(it, account) }
@@ -67,18 +67,48 @@ class AccountSwitcher(private val project: Project) {
                 git.repositories().forEach { it.update() }
                 current = git.identity(roots.first())
                 notify(
-                    "<b>${account.displayName}</b> faollashtirildi: ${account.userName} &lt;${account.email}&gt;" +
-                        if (roots.size > 1) " (${roots.size} ta repozitoriy)" else "",
+                    Msg("switch.done", account.displayName, account.userName, account.email) +
+                        if (roots.size > 1) " " + Msg("switch.done.repos", roots.size) else "",
                     NotificationType.INFORMATION,
                 )
+                linkIdeAccount(account)
             }
 
             override fun onThrowable(error: Throwable) {
-                notify("Akkauntni almashtirib bo'lmadi: ${error.message}", NotificationType.ERROR)
+                notify(Msg("switch.failed", error.message), NotificationType.ERROR)
             }
 
             override fun onFinished() = updateWidget()
         }.queue()
+    }
+
+    /** IDE ning GitHub akkauntini loyiha uchun default qiladi; IDE da login bo'lmasa taklif qiladi. */
+    private fun linkIdeAccount(account: GitAccount) {
+        val login = account.githubLogin.trim()
+        if (login.isEmpty()) return
+        ApplicationManager.getApplication().invokeLater({
+            val ide = IdeGitHubAccounts.find(login)
+            if (ide != null) IdeGitHubAccounts.setProjectDefault(project, ide)
+            else notify(
+                Msg("ide.notLinked", login),
+                NotificationType.WARNING,
+                NotificationAction.createSimpleExpiring(Msg("ide.login.action")) { loginToIde(account) },
+            )
+        }, project.disposed)
+    }
+
+    /** IDE ning GitHub login oynasini ochadi va natijani akkauntga bog'laydi. EDT da chaqiring. */
+    fun loginToIde(account: GitAccount? = null) {
+        val ide = IdeGitHubAccounts.login(project, null) ?: return
+        val state = AccountsState.getInstance()
+        val target = account?.let { a -> state.accounts.firstOrNull { it.email.equals(a.email, ignoreCase = true) } }
+        if (target != null && !target.githubLogin.equals(ide.name, ignoreCase = true)) {
+            state.accounts = state.accounts.map { if (it.email.equals(target.email, true)) it.copy().apply { githubLogin = ide.name } else it }
+            notify(Msg("ide.linked.reselect", ide.name), NotificationType.INFORMATION)
+        } else {
+            IdeGitHubAccounts.setProjectDefault(project, ide)
+            notify(Msg("ide.linked", ide.name), NotificationType.INFORMATION)
+        }
     }
 
     private fun apply(root: File, account: GitAccount) {
@@ -126,21 +156,24 @@ class AccountSwitcher(private val project: Project) {
     fun createPopup(): ListPopup {
         val accounts = AccountsState.getInstance().accounts
         val active = currentAccount
+        val ideLogins = IdeGitHubAccounts.all().map { it.name }
         val items = buildList<Item> {
             accounts.forEach { add(Item.Account(it)) }
             val email = current?.email
             if (email != null && active == null) add(Item.SaveCurrent(email))
             add(Item.Manage)
         }
-        val step = object : BaseListPopupStep<Item>("GitHub akkaunt", items) {
+        val step = object : BaseListPopupStep<Item>(Msg("popup.title"), items) {
             override fun getTextFor(value: Item): String = when (value) {
                 is Item.Account -> buildString {
                     append(if (value.account === active) "✓ " else "    ")
                     append(value.account.displayName)
                     append("  —  ").append(value.account.email)
+                    if (value.account.githubLogin.isNotBlank() && ideLogins.none { it.equals(value.account.githubLogin, true) })
+                        append("   ").append(Msg("popup.notLinked"))
                 }
-                is Item.SaveCurrent -> "Joriy identityni saqlash (${value.email})…"
-                Item.Manage -> "Akkauntlarni boshqarish…"
+                is Item.SaveCurrent -> Msg("popup.saveCurrent", value.email)
+                Item.Manage -> Msg("popup.manage")
             }
 
             override fun getSeparatorAbove(value: Item) =
@@ -159,11 +192,12 @@ class AccountSwitcher(private val project: Project) {
         return JBPopupFactory.getInstance().createListPopup(step)
     }
 
-    fun notify(html: String, type: NotificationType) {
-        val n = NotificationGroupManager.getInstance().getNotificationGroup("GitHub Account Switcher")
-            .createNotification("GitHub Account Switcher", html, type)
-        if (type != NotificationType.INFORMATION) {
-            n.addAction(NotificationAction.createSimpleExpiring("Akkaunt tanlash…") {
+    fun notify(html: String, type: NotificationType, vararg actions: NotificationAction) {
+        val n = NotificationGroupManager.getInstance().getNotificationGroup(PLUGIN_NAME)
+            .createNotification(PLUGIN_NAME, html, type)
+        actions.forEach { n.addAction(it) }
+        if (type != NotificationType.INFORMATION && actions.isEmpty()) {
+            n.addAction(NotificationAction.createSimpleExpiring(Msg("notify.choose")) {
                 createPopup().showCenteredInCurrentWindow(project)
             })
         }

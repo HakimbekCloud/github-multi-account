@@ -8,12 +8,12 @@ import com.intellij.openapi.wm.StatusBarWidgetFactory
 
 class AccountWidgetFactory : StatusBarWidgetFactory {
     override fun getId() = ID
-    override fun getDisplayName() = "GitHub Account"
+    override fun getDisplayName() = Msg("widget.name")
     override fun isAvailable(project: Project) = true
     override fun createWidget(project: Project): StatusBarWidget = AccountWidget(project)
 
     companion object {
-        const val ID = "GitHubAccountSwitcher"
+        const val ID = "GitHubMultiAccount"
     }
 }
 
@@ -29,13 +29,13 @@ class AccountWidget(private val project: Project) : StatusBarWidget, StatusBarWi
     override fun getSelectedValue(): String {
         val id = switcher.current ?: return "GitHub: —"
         val label = switcher.currentAccount?.displayName ?: id.email ?: "—"
-        return if (id.local) "GitHub: $label" else "GitHub: $label (global)"
+        return if (id.local) "GitHub: $label" else "GitHub: $label " + Msg("widget.global")
     }
 
     override fun getTooltipText(): String {
-        val id = switcher.current ?: return "Git repozitoriy topilmadi"
-        val scope = if (id.local) "shu repozitoriy uchun o'rnatilgan" else "global configdan olinmoqda — akkaunt tanlang"
-        return "Commit muallifi: ${id.name} <${id.email}> ($scope). Almashtirish uchun bosing."
+        val id = switcher.current ?: return Msg("widget.tooltip.noRepo")
+        val scope = Msg(if (id.local) "widget.scope.local" else "widget.scope.global")
+        return Msg("widget.tooltip", id.name, id.email, scope)
     }
 
     override fun getPopup(): JBPopup = switcher.createPopup()

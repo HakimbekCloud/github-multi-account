@@ -21,6 +21,10 @@ class GitAccount(
     fun copy() = GitAccount(label, userName, email, githubLogin, sshKeyPath)
 }
 
+/** Plagin nomi (bildirishnomalar va sozlamalar sarlavhasi). */
+const val PLUGIN_NAME = "GitHub Multi-Account"
+
+// Eski nom saqlangan — oldingi versiya sozlamalari yo'qolmasin
 @Service(Service.Level.APP)
 @State(name = "GitHubAccountSwitcher", storages = [Storage("githubAccountSwitcher.xml")])
 class AccountsState : PersistentStateComponent<AccountsState.Data> {
@@ -28,6 +32,8 @@ class AccountsState : PersistentStateComponent<AccountsState.Data> {
         var accounts: MutableList<GitAccount> = mutableListOf()
         /** Almashtirganda global git configni ham yangilash. */
         var alsoGlobal: Boolean = false
+        /** Plagin tili: en (default), uz, ru. */
+        var language: String = PluginLanguage.EN.code
     }
 
     private var data = Data()
@@ -39,6 +45,10 @@ class AccountsState : PersistentStateComponent<AccountsState.Data> {
     var alsoGlobal: Boolean
         get() = data.alsoGlobal
         set(value) { data.alsoGlobal = value }
+
+    var language: PluginLanguage
+        get() = PluginLanguage.of(data.language)
+        set(value) { data.language = value.code }
 
     fun findByEmail(email: String?): GitAccount? =
         if (email.isNullOrBlank()) null else accounts.firstOrNull { it.email.equals(email, ignoreCase = true) }

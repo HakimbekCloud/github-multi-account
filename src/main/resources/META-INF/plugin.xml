@@ -1,32 +1,50 @@
 <idea-plugin>
-    <id>uz.hakimbek.github-account-switcher</id>
-    <name>GitHub Account Switcher</name>
-    <vendor email="hakimbekboboyev@gmail.com">Hakimbek</vendor>
+    <id>uz.hakimbek.github-multi-account</id>
+    <name>GitHub Multi-Account</name>
+    <vendor email="hakimbekboboyev@gmail.com" url="https://github.com/HakimbekCloud/github-multi-account">Hakimbek</vendor>
 
     <description><![CDATA[
-    Bir nechta GitHub akkaunt orasida bir bosishda almashish.<br/>
-    Tanlangan akkaunt joriy repozitoriyning <b>lokal</b> git configiga yoziladi:
+    Work with several GitHub accounts without committing or pushing as the wrong person.
+    Pick an account in the status bar and the current repository is switched to it in one click.
+
+    <h3>What switching does</h3>
+    Everything is written to the repository's <b>local</b> git config, so other projects are not affected:
     <ul>
-      <li><code>user.name</code> / <code>user.email</code> — commit muallifi</li>
-      <li>HTTPS remote URL ga GitHub login qo'shiladi (<code>https://login@github.com/...</code>) — push shu akkaunt bilan</li>
-      <li>SSH kalit berilgan bo'lsa <code>core.sshCommand</code> — push shu kalit bilan</li>
+      <li><code>user.name</code> / <code>user.email</code> — commits are authored by the selected account</li>
+      <li>HTTPS remotes become <code>https://&lt;login&gt;@github.com/…</code> — pushes authenticate as that account</li>
+      <li><code>core.sshCommand</code> with the account's key, if one is set — SSH pushes use that key</li>
+      <li>the matching IDE GitHub account becomes the project's default (pull requests, share, gists)</li>
     </ul>
-    Status barda joriy akkaunt ko'rinadi, ustiga bosib almashtiriladi.
+
+    <h3>Features</h3>
+    <ul>
+      <li>Status bar widget showing the current commit identity; click to switch (also <b>Git | Switch GitHub Account…</b>, <kbd>Ctrl+Alt+Shift+G</kbd>)</li>
+      <li>Warning when a repository has no account selected and falls back to the global git identity</li>
+      <li>Import accounts from <b>Settings | Version Control | GitHub</b>, or log in to a new one — its repositories then appear in <b>Git | Clone</b></li>
+      <li>Optional: also update the global git identity on switch</li>
+      <li>Interface in English, O'zbekcha and Русский</li>
+    </ul>
+
+    <h3>Privacy</h3>
+    The plugin stores only the account list you enter (name, email, GitHub login, SSH key path) in the IDE settings.
+    When you import accounts, it uses the token already saved by the IDE's GitHub integration to call
+    <code>api.github.com/user</code> and <code>/user/emails</code> once, only to read the name and email. Nothing is sent anywhere else.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>Git4Idea</depends>
+    <depends>org.jetbrains.plugins.github</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable parentId="tools"
                                  instance="uz.hakimbek.ghswitch.AccountsConfigurable"
                                  id="uz.hakimbek.ghswitch.settings"
-                                 displayName="GitHub Account Switcher"/>
-        <statusBarWidgetFactory id="GitHubAccountSwitcher"
+                                 displayName="GitHub Multi-Account"/>
+        <statusBarWidgetFactory id="GitHubMultiAccount"
                                 implementation="uz.hakimbek.ghswitch.AccountWidgetFactory"
                                 order="after positionWidget"/>
         <postStartupActivity implementation="uz.hakimbek.ghswitch.IdentityStartupCheck"/>
-        <notificationGroup id="GitHub Account Switcher" displayType="BALLOON"/>
+        <notificationGroup id="GitHub Multi-Account" displayType="BALLOON"/>
     </extensions>
 
     <applicationListeners>
@@ -38,7 +56,7 @@
         <action id="uz.hakimbek.ghswitch.SwitchAccount"
                 class="uz.hakimbek.ghswitch.SwitchAccountAction"
                 text="Switch GitHub Account…"
-                description="Joriy repozitoriy uchun GitHub akkauntni almashtirish">
+                description="Switch the GitHub account for the current repository">
             <add-to-group group-id="Git.MainMenu" anchor="first"/>
             <add-to-group group-id="ToolsMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift G"/>

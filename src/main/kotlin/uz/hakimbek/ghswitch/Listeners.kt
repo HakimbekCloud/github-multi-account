@@ -10,13 +10,14 @@ import com.intellij.openapi.wm.IdeFrame
 /** Loyiha ochilganda: repo global identity bilan ishlayotgan bo'lsa ogohlantiradi. */
 class IdentityStartupCheck : ProjectActivity {
     override suspend fun execute(project: Project) {
+        // user.name IDE dagi GitHub akkaunt nomiga teng bo'lsa, GitHub loginni o'zi to'ldiradi
+        IdeGitHubAccounts.autoLink(AccountsState.getInstance())
         val switcher = AccountSwitcher.getInstance(project)
         switcher.refresh {
             val id = switcher.current ?: return@refresh
             if (id.local || AccountsState.getInstance().accounts.size < 2) return@refresh
             switcher.notify(
-                "Bu repozitoriyda akkaunt tanlanmagan — commitlar global identity bilan bo'ladi: " +
-                    "<b>${id.name} &lt;${id.email}&gt;</b>",
+                Msg("startup.globalIdentity", id.name, id.email),
                 NotificationType.WARNING,
             )
         }

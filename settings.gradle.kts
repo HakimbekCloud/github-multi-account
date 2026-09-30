@@ -1,1 +1,1 @@
-rootProject.name = "github-account-switcher"
+rootProject.name = "github-multi-account"

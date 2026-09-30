@@ -9,6 +9,8 @@ class SwitchAccountAction : AnAction() {
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = e.project != null
+        e.presentation.text = Msg("action.switch")
+        e.presentation.description = Msg("action.switch.description")
     }
 
     override fun actionPerformed(e: AnActionEvent) {
